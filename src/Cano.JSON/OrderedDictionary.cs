@@ -20,7 +20,7 @@ namespace Cano.JSON
 
         private class InternalCollection : KeyedCollection<TKey, TItem>
         {
-            protected override TKey GetKeyForItem(OrderedDictionary<TKey, TValue>.TItem item)
+            protected override TKey GetKeyForItem(TItem item)
             {
                 return item.Key;
             }
@@ -30,9 +30,21 @@ namespace Cano.JSON
 
         public int Count => collection.Count;
 
-        public bool isReadOnly => false;
+        public bool IsReadOnly => false;
 
-        public IReadOnlyList<TKey> keys { get; }
+        public IReadOnlyList<TKey> Keys { get; }
+
+        public IReadOnlyList<TValue> Values { get; }
+
+        ICollection<TKey> IDictionary<TKey, TValue>.Keys => (KeyCollection)Keys;
+        
+        ICollection<TValue> IDictionary<TKey, TValue>.Values => (ValueCollection)Values;
+
+        public OrderedDictionary()
+        {
+            Keys = new KeyCollection(collection);
+            Values = new ValueCollection(collection);
+        }
 
         public TValue this[TKey key]
         {
@@ -47,11 +59,19 @@ namespace Cano.JSON
                 else
                     Add(key, value);
             }
-        } 
+        }
+
+        public TValue this[int index]
+        {
+            get
+            {
+                return collection[index].Value;
+            }
+        }
 
         public void Add(TKey key, TValue value)
         {
-            collection.Add(new TItem[key, value]);
+            collection.Add(new TItem(key, value));
         }
 
         public bool ContainsKey(TKey key)
@@ -64,16 +84,51 @@ namespace Cano.JSON
             return collection.Remove(key);
         }
 
-        public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value) 
+        public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
         {
             if (collection.TryGetValue(key, out var entry))
             {
                 value = entry.Value;
                 return true;
             }
-
             value = default;
             return false;
-        } 
+        }
+
+        void ICollection<KeyValuePair<TKey, TValue>>.Add(KeyValuePair<TKey, TValue> item)
+        {
+            Add(item.Key, item.Value);
+        }
+
+        public void Clear()
+        {
+            collection.Clear();
+        }
+
+        bool ICollection<KeyValuePair<TKey, TValue>>.Contains(KeyValuePair<TKey, TValue> item)
+        {
+            return collection.Contains(item.Key);
+        }
+
+        void ICollection<KeyValuePair<TKey, TValue>>.CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
+        {
+            for (int i = 0; i < collection.Count; i++)
+                array[i + arrayIndex] = new KeyValuePair<TKey, TValue>(collection[i].Key, collection[i].Value);
+        }
+
+        bool ICollection<KeyValuePair<TKey, TValue>>.Remove(KeyValuePair<TKey, TValue> item)
+        {
+            return collection.Remove(item.Key);
+        }
+
+        IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator()
+        {
+            return collection.Select(p => new KeyValuePair<TKey, TValue>(p.Key, p.Value)).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return collection.Select(p => new KeyValuePair<TKey, TValue>(p.Key, p.Value)).GetEnumerator();
+        }
     }
 }
