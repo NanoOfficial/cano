@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Cano.JSON
 {
-    public class JBoolean: JToken
+    public class JBoolean : JToken
     {
         public bool Value { get; }
 
@@ -16,7 +16,22 @@ namespace Cano.JSON
             return Value;
         }
 
+        public override double AsNumber()
+        {
+            return Value ? 1 : 0;
+        }
+
+        public override string AsString()
+        {
+            return Value.ToString().ToLowerInvariant();
+        }
+
         public override bool GetBoolean() => Value;
+
+        public override string ToString()
+        {
+            return AsString();
+        }
 
         internal override void Write(Utf8JsonWriter writer)
         {
