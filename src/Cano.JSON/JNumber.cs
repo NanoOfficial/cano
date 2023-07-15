@@ -3,9 +3,11 @@ using System.Text.Json;
 
 namespace Cano.JSON
 {
-    public class JNumber: JToken
+    public class JNumber : JToken
     {
         public static readonly long MAX_SAFE_INTEGER = (long)Math.Pow(2, 53) - 1;
+
+        public static readonly long MIN_SAFE_INTEGER = -MAX_SAFE_INTEGER;
 
         public double Value { get; }
 
@@ -20,6 +22,11 @@ namespace Cano.JSON
             return Value != 0;
         }
 
+        public override double AsNumber()
+        {
+            return Value;
+        }
+
         public override string AsString()
         {
             return Value.ToString(CultureInfo.InvariantCulture);
@@ -32,10 +39,53 @@ namespace Cano.JSON
             return AsString();
         }
 
-        public override JToken Clone()
+        public override T AsEnum<T>(T defaultValue = default, bool ignoreCase = false)
+        {
+            Type enumType = typeof(T);
+            object value;
+            try
+            {
+                value = Convert.ChangeType(Value, enumType.GetEnumUnderlyingType());
+            }
+            catch (OverflowException)
+            {
+                return defaultValue;
+            }
+            object result = Enum.ToObject(enumType, value);
+            return Enum.IsDefined(enumType, result) ? (T)result : defaultValue;
+        }
+
+        public override T GetEnum<T>(bool ignoreCase = false)
+        {
+            Type enumType = typeof(T);
+            object value;
+            try
+            {
+                value = Convert.ChangeType(Value, enumType.GetEnumUnderlyingType());
+            }
+            catch (OverflowException)
+            {
+                throw new InvalidCastException();
+            }
+            object result = Enum.ToObject(enumType, value);
+            if (!Enum.IsDefined(enumType, result))
+                throw new InvalidCastException();
+            return (T)result;
+        }
+
+        internal override void Write(Utf8JsonWriter writer)
+        {
+            writer.WriteNumberValue(Value);
+        }
+
+        public override JNumber Clone()
         {
             return this;
         }
 
+        public static implicit operator JNumber(double value)
+        {
+            return new JNumber(value);
+        }
     }
 }
